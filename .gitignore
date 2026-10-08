@@ -1,0 +1,9 @@
+# Journaux d'exécution d'Airflow 
+logs/
+
+# Fichiers temporaires de Python
+__pycache__/
+*.pyc
+
+# Configuration locale
+.env
