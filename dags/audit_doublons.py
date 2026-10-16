@@ -280,7 +280,8 @@ def audit_doublons():
         )
 
         modele = SentenceTransformer(
-            MODELE_ADRESSE
+            MODELE_ADRESSE,
+            local_files_only=True
         )
 
         logging.info(
