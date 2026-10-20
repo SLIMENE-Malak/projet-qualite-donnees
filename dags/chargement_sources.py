@@ -25,7 +25,13 @@ def chargement_sources():
         sql="chargement/copie_sources.sql",
     )
 
-    creation >> copie
+    correspondance = SQLExecuteQueryOperator(
+        task_id="correspondance_csp",
+        conn_id="postgres_projet",
+        sql="chargement/correspondance_csp.sql",
+    )
+
+    creation >> [copie, correspondance]
 
 
 chargement_sources()
