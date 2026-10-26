@@ -1,0 +1,16 @@
+CREATE SCHEMA IF NOT EXISTS qualite;
+
+CREATE TABLE IF NOT EXISTS qualite.historique_qualite (
+    id_mesure BIGSERIAL PRIMARY KEY,
+    date_mesure TIMESTAMP NOT NULL
+        DEFAULT (CURRENT_TIMESTAMP AT TIME ZONE 'UTC'),
+    facteur VARCHAR(50) NOT NULL,
+    objet VARCHAR(200) NOT NULL,
+    metrique VARCHAR(100) NOT NULL,
+    valeur NUMERIC(12, 4) NOT NULL,
+    unite VARCHAR(20)
+);
+
+ALTER TABLE qualite.historique_qualite
+ALTER COLUMN date_mesure
+SET DEFAULT (CURRENT_TIMESTAMP AT TIME ZONE 'UTC');
