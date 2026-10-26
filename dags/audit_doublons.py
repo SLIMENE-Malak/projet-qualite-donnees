@@ -7,13 +7,14 @@ import pandas as pd
 
 from airflow.sdk import dag, task
 from airflow.providers.postgres.hooks.postgres import PostgresHook
+from airflow.providers.common.sql.operators.sql import SQLExecuteQueryOperator
 
 
 # ============================================================
 # PARAMETRES
 # ============================================================
 
-SEUIL_DOUBLON = 0.80
+SEUIL_DOUBLON = 0.75
 
 MODELE_ADRESSE = (
     "sentence-transformers/"
@@ -177,6 +178,7 @@ def similarite_levenshtein(texte1, texte2):
     ),
     schedule=None,
     catchup=False,
+    template_searchpath="/opt/airflow/dags/sql",
     tags=[
         "audit",
         "doublons"
@@ -184,7 +186,7 @@ def similarite_levenshtein(texte1, texte2):
 )
 def audit_doublons():
 
-    @task
+    @task(multiple_outputs=True)
     def calculer_similarites():
 
         # Import dans la tâche pour éviter
@@ -400,7 +402,6 @@ def audit_doublons():
                         ]
                     )
 
-                    # Score limité à l'intervalle [0, 1]
                     sim_adresse_sem = max(
                         0.0,
                         min(
@@ -651,8 +652,6 @@ def audit_doublons():
         # ENREGISTREMENTS CONCERNES PAR UN DOUBLON
         # ----------------------------------------------------
 
-        # Une paire contient deux enregistrements :
-        # un de Paris et un d'Evry.
         nombre_enregistrements_concernes = (
             nombre_paires_doublons * 2
         )
@@ -666,8 +665,6 @@ def audit_doublons():
         # ENREGISTREMENTS REDONDANTS
         # ----------------------------------------------------
 
-        # Dans une paire de doublons,
-        # une seule ligne est réellement en trop.
         nombre_enregistrements_redondants = (
             nombre_paires_doublons
         )
@@ -839,7 +836,31 @@ def audit_doublons():
             "Audit des doublons terminé avec succès."
         )
 
-    calculer_similarites()
+        # ====================================================
+        # 19. VALEURS A HISTORISER
+        # ====================================================
+
+        return {
+            "taux_redondance": float(taux_redondance),
+            "taux_unicite": float(taux_unicite),
+        }
+
+    resultats = calculer_similarites()
+
+    enregistrer_historique = SQLExecuteQueryOperator(
+        task_id="enregistrer_historique",
+        conn_id="postgres_projet",
+        sql="qualite/historiser_doublons.sql",
+        parameters={
+            "taux_redondance":
+                resultats["taux_redondance"],
+
+            "taux_unicite":
+                resultats["taux_unicite"],
+        },
+    )
+
+    resultats >> enregistrer_historique
 
 
 audit_doublons()
